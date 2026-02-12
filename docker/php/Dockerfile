@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip zip curl \
     libzip-dev \
+    nano \
     default-mysql-client \
   && docker-php-ext-install pdo pdo_mysql \
   && rm -rf /var/lib/apt/lists/*
