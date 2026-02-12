@@ -1,4 +1,4 @@
-FROM php:8.2-cli-bookworm
+FROM php:8.4-rc-cli-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 

@@ -9,6 +9,8 @@ if [ ! -f .env ]; then
   cp .env.example .env
 fi
 
+git config --global --add safe.directory /app || true
+
 # Ensure vendor deps
 if [ ! -d vendor ]; then
   echo "Installing composer dependencies..."
