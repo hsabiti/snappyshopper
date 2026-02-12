@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Postcode;
 use App\Models\Store;
+use App\Services\GeoService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -93,10 +94,12 @@ class StoreController extends Controller
             ->select(['id','name','postcode','lat','lng','delivery_radius_km','opens_at','closes_at','timezone'])
             ->get();
 
+        $geo = app(GeoService::class);
+
         // Compute distance in PHP (portable), then filter + sort
         $stores = $candidates
-            ->map(function (Store $s) use ($lat, $lng) {
-                $dist = $this->haversineKm($lat, $lng, (float)$s->lat, (float)$s->lng);
+            ->map(function (Store $s) use ($lat, $lng, $geo) {
+                $dist = $geo->haversineKm($lat, $lng, (float)$s->lat, (float)$s->lng);
                 return [
                     'id' => $s->id,
                     'name' => $s->name,
@@ -159,7 +162,9 @@ class StoreController extends Controller
             $destLng = (float)$data['lng'];
         }
 
-        $distanceKm = $this->haversineKm((float)$store->lat, (float)$store->lng, $destLat, $destLng);
+        $geo = app(GeoService::class);
+
+        $distanceKm = $geo->haversineKm((float)$store->lat, (float)$store->lng, $destLat, $destLng);
         $withinRadius = $distanceKm <= (float)$store->delivery_radius_km;
 
         // Bonus: operating hours check
@@ -167,7 +172,7 @@ class StoreController extends Controller
 
         $canDeliver = $withinRadius && $open;
 
-        $etaMinutes = $this->estimateEtaMinutes($distanceKm);
+        $etaMinutes = $geo->estimateEtaMinutes($distanceKm);
 
         return response()->json([
             'store_id' => $store->id,
@@ -209,29 +214,6 @@ class StoreController extends Controller
         }
 
         return $now->between($open, $close);
-    }
-
-    private function estimateEtaMinutes(float $distanceKm): int
-    {
-        // Minimal heuristic: 10 mins handling + travel time @ 20km/h average
-        $handling = 10;
-        $travel = (int)ceil(($distanceKm / 20.0) * 60.0);
-        return $handling + $travel;
-    }
-
-    private function haversineKm(float $lat1, float $lon1, float $lat2, float $lon2): float
-    {
-        $earthRadius = 6371.0;
-
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
-
-        $a = sin($dLat / 2) ** 2 +
-            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-            sin($dLon / 2) ** 2;
-
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-        return $earthRadius * $c;
     }
 
     private function boundingBox(float $lat, float $lng, float $radiusKm): array
