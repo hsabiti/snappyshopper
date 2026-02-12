@@ -7,6 +7,32 @@ cd /app
 if [ ! -f .env ]; then
   echo "No .env found, copying from .env.example"
   cp .env.example .env
+
+  # Force DB settings for Docker runtime (prevents local .env values breaking container)
+    php -r '
+    $env = file_exists(".env") ? file(".env", FILE_IGNORE_NEW_LINES) : [];
+    $set = [
+    "DB_CONNECTION" => getenv("DB_CONNECTION") ?: "mysql",
+    "DB_HOST"       => getenv("DB_HOST") ?: "db",
+    "DB_PORT"       => getenv("DB_PORT") ?: "3306",
+    "DB_DATABASE"   => getenv("DB_DATABASE") ?: "snappy",
+    "DB_USERNAME"   => getenv("DB_USERNAME") ?: "snappy",
+    "DB_PASSWORD"   => getenv("DB_PASSWORD") ?: "snappy",
+    "CACHE_DRIVER"  => getenv("CACHE_DRIVER") ?: "file",
+    "API_KEY"       => getenv("API_KEY") ?: "change-me",
+    ];
+
+    $map = [];
+    foreach ($env as $line) {
+    if (preg_match("/^([A-Z0-9_]+)=(.*)$/", $line, $m)) $map[$m[1]] = $m[2];
+    }
+    foreach ($set as $k => $v) {
+    $map[$k] = $v;
+    }
+    $out = [];
+    foreach ($map as $k => $v) $out[] = $k."=".$v;
+    file_put_contents(".env", implode(PHP_EOL, $out).PHP_EOL);
+    '
 fi
 
 git config --global --add safe.directory /app || true
