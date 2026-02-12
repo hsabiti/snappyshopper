@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\StoreController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,3 +18,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+
+Route::post('/stores', [StoreController::class, 'store'])->middleware('api.key');                // create
+Route::get('/stores/nearby', [StoreController::class, 'nearby']);          // discovery
+Route::get('/stores/can-deliver', [StoreController::class, 'canDeliver']); // feasibility
